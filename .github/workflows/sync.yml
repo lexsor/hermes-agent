@@ -5,6 +5,11 @@ on:
     - cron: '0 0 * * *' # Runs every day at midnight UTC
   workflow_dispatch: # Allows you to manually trigger the sync via the Actions tab
 
+# This fork's default GITHUB_TOKEN is read-only, which made merge-upstream
+# return "HTTP 403: Resource not accessible by integration".
+permissions:
+  contents: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -12,4 +17,7 @@ jobs:
       - name: Sync Fork
         run: gh repo sync ${{ github.repository }} --branch main
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN can never update files under .github/workflows/, and
+          # upstream changes those often. Set a SYNC_TOKEN secret (a PAT with
+          # `repo` + `workflow` scopes) so those syncs don't fail too.
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
