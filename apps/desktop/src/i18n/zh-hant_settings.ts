@@ -2,6 +2,7 @@ import { defineFieldCopy } from '@/app/settings/field-copy'
 
 import type { TranslationOverrides } from './define-locale'
 import { zhHantDelegationRouting } from './zh-hant_delegation_routing'
+import { zhHantMemoryLayers } from './zh-hant_memory_layers'
 import { zhHantUpdateChannel } from './zh-hant_update_channel'
 
 export const zhHantSettings = {
@@ -16,6 +17,7 @@ export const zhHantSettings = {
   },
 
   settings: {
+    memoryLayers: zhHantMemoryLayers,
     subpages: {
       appearanceTheme: '主題',
       appearanceTypography: '字體與縮放',
@@ -1531,7 +1533,7 @@ export const zhHantSettings = {
       autoArchiveFailed: '無法更新自動封存設定',
       defaultDirTitle: '預設專案目錄',
       defaultDirDesc: '新工作階段預設從此資料夾開始，除非您選擇其他目錄。留空則使用您的家目錄。',
-      defaultDirUpdated: '預設專案目錄已更新',
+      defaultDirUpdated: () => '預設專案目錄已更新',
       defaultsTo: label => `預設使用 ${label}。`,
       change: '變更',
       choose: '選擇',
