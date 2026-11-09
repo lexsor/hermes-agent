@@ -109,16 +109,17 @@ def _telegram_bot(token):
     """Bot honouring TELEGRAM_PROXY (standalone sends time out where api.telegram.org is
     blocked); falls back to a direct connection."""
     from telegram import Bot
+    from gateway.platforms.base import describe_proxy_error, resolve_proxy_url, safe_proxy_url_for_log
+    proxy = None
     try:
-        from gateway.platforms.base import resolve_proxy_url
         proxy = resolve_proxy_url("TELEGRAM_PROXY", target_hosts=["api.telegram.org"])
         if not proxy:
             return Bot(token=token)
         from telegram.request import HTTPXRequest
-        logger.info("send_message: standalone Telegram send routed through proxy %s", proxy)
+        logger.info("send_message: standalone Telegram send routed through proxy %s", safe_proxy_url_for_log(proxy))
         return Bot(token=token, request=HTTPXRequest(proxy=proxy), get_updates_request=HTTPXRequest(proxy=proxy))
     except Exception as proxy_err:
-        logger.warning("send_message: failed to attach Telegram proxy (%s), falling back to direct connection", proxy_err)
+        logger.warning("send_message: failed to attach Telegram proxy (%s), falling back to direct connection", describe_proxy_error(proxy_err, proxy) or proxy_err)
     return Bot(token=token)
 
 
@@ -258,6 +259,12 @@ def _telegram_format(message):
 
 async def _send_telegram(token, chat_id, message, media_files=None, thread_id=None, disable_link_previews=False, force_document=False):
     """One-shot Telegram Bot API send; parse failures fall back to plain text."""
+    if str(thread_id or "").strip() and not str(thread_id).strip().lstrip("-").isdigit():
+        # ``<chat>:<topic name>`` parses for every caller, but only the live gateway's cron router
+        # resolves a name (ensure_dm_topic): the Bot API has no topic lookup by name (#80483).
+        return _error(f"Telegram topic '{thread_id}' is a name, not a thread id: a direct send cannot "
+                      "resolve named topics. Use telegram:<chat_id>:<numeric thread id>, or deliver "
+                      "through a cron job while the gateway is running.")
     try:
         formatted, send_parse_mode, _has_html = _telegram_format(message)
         bot = _telegram_bot(token)
